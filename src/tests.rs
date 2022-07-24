@@ -44,13 +44,14 @@ fn dispute_resolve() {
 fn dispute_chargeback() {
     const INPUT: &str = r#"type,       client, tx, amount
                            deposit,         3,  7,      2
+                           deposit,         3,  8,      4
                            dispute,         3,  7,
                            chargeback,      3,  7,
                            deposit,         3,  9,     30
 "#;
 
     const WANT: &str = r#"client,available,held,total,locked
-3,0,0,0,true
+3,4,0,4,true
 "#;
 
     let mut buf = Vec::new();
