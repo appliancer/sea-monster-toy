@@ -20,7 +20,9 @@ fn process_transactions(engine: &mut Engine, reader: impl Read) -> Result<(), Bo
         let record = record?;
         let fields: Vec<&str> = record.iter().map(str::trim).collect();
         let transaction = parse_transaction(&fields)?;
-        engine.do_transaction(transaction);
+        engine
+            .do_transaction(transaction)
+            .unwrap_or_else(|err| eprintln!("transaction failed with error: {}", err));
     }
     Ok(())
 }

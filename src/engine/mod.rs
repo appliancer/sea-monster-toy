@@ -20,13 +20,16 @@ impl Engine {
         self.accounts.values()
     }
 
-    pub fn do_transaction(&mut self, transaction: Transaction) {
+    pub fn do_transaction(&mut self, transaction: Transaction) -> Result<(), String> {
         match transaction {
-            Transaction::Deposit { id, client, amount } => self.do_deposit(id, client, amount),
+            Transaction::Deposit { id, client, amount } => {
+                self.do_deposit(id, client, amount);
+                Ok(())
+            }
             Transaction::Withdrawal { client, amount, .. } => self.do_withdrawal(client, amount),
-            Transaction::Dispute { client, deposit } => {}
-            Transaction::Resolve { client, deposit } => {}
-            Transaction::Chargeback { client, deposit } => {}
+            Transaction::Dispute { client, deposit } => Err("Not implemented".into()),
+            Transaction::Resolve { client, deposit } => Err("Not implemented".into()),
+            Transaction::Chargeback { client, deposit } => Err("Not implemented".into()),
         }
     }
 
@@ -48,21 +51,22 @@ impl Engine {
         ); // TODO: log if already exists
     }
 
-    fn do_withdrawal(&mut self, client: ClientId, amount: Money) {
+    fn do_withdrawal(&mut self, client: ClientId, amount: Money) -> Result<(), String> {
         let account = self
             .accounts
             .entry(client)
             .or_insert_with(|| Account::new(client));
 
         if amount > account.available {
-            eprintln!(
+            return Err(format!(
                 "client {} has insufficient available funds ({}) to withdraw {}",
                 account.client, account.available, amount
-            );
-            return;
+            ));
         }
 
         account.available -= amount;
+
+        Ok(())
     }
 
     fn do_dispute(&mut self, client: ClientId, deposit_id: TransactionId) -> Result<(), String> {
