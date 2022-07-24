@@ -1,15 +1,20 @@
-use engine::{types::Transaction, Engine};
+use engine::{
+    types::{Account, Transaction},
+    Engine,
+};
 use std::error::Error;
 use std::io::{Read, Write};
 
 mod engine;
 
-pub fn process_transactions(
-    reader: impl Read,
-    writer: &mut impl Write,
-) -> Result<(), Box<dyn Error>> {
+pub fn run(reader: impl Read, writer: &mut impl Write) -> Result<(), Box<dyn Error>> {
     let mut engine = Engine::new();
+    process_transactions(&mut engine, reader)?;
+    print_accounts(engine.get_accounts(), writer)?;
+    Ok(())
+}
 
+fn process_transactions(engine: &mut Engine, reader: impl Read) -> Result<(), Box<dyn Error>> {
     let mut csv_reader = csv::Reader::from_reader(reader);
     for record in csv_reader.records() {
         let record = record?;
@@ -17,11 +22,17 @@ pub fn process_transactions(
         let transaction = parse_transaction(&fields)?;
         engine.do_transaction(transaction);
     }
+    Ok(())
+}
 
+fn print_accounts<'a>(
+    accounts: impl Iterator<Item = &'a Account>,
+    writer: &mut impl Write,
+) -> Result<(), Box<dyn Error>> {
     const HEADERS: [&str; 5] = ["client", "available", "held", "total", "locked"];
     let mut csv_writer = csv::Writer::from_writer(writer);
     csv_writer.write_record(HEADERS)?;
-    for account in engine.get_accounts() {
+    for account in accounts {
         csv_writer.write_record([
             account.client.to_string(),
             account.available.to_string(),
@@ -30,7 +41,6 @@ pub fn process_transactions(
             account.locked.to_string(),
         ])?;
     }
-
     Ok(())
 }
 

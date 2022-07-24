@@ -12,7 +12,7 @@ fn main() {
         process::exit(1);
     });
 
-    sea_monster_toy::process_transactions(file, &mut io::stdout()).unwrap_or_else(|err| {
+    sea_monster_toy::run(file, &mut io::stdout()).unwrap_or_else(|err| {
         eprintln!("Error processing transactions: {}", err);
         process::exit(1);
     });
