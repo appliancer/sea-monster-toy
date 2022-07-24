@@ -22,15 +22,13 @@ impl Engine {
 
     pub fn do_transaction(&mut self, transaction: Transaction) -> Result<(), String> {
         match transaction {
-            Transaction::Deposit { id, client, amount } => {
-                self.do_deposit(id, client, amount);
-                Ok(())
-            }
-            Transaction::Withdrawal { client, amount, .. } => self.do_withdrawal(client, amount),
-            Transaction::Dispute { client, deposit } => Err("Not implemented".into()),
-            Transaction::Resolve { client, deposit } => Err("Not implemented".into()),
-            Transaction::Chargeback { client, deposit } => Err("Not implemented".into()),
+            Transaction::Deposit { id, client, amount } => self.do_deposit(id, client, amount),
+            Transaction::Withdrawal { client, amount, .. } => self.do_withdrawal(client, amount)?,
+            Transaction::Dispute { client, deposit } => {}
+            Transaction::Resolve { client, deposit } => {}
+            Transaction::Chargeback { client, deposit } => {}
         }
+        Ok(())
     }
 
     fn do_deposit(&mut self, id: TransactionId, client: ClientId, amount: Money) {
