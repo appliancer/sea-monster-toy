@@ -25,7 +25,7 @@ impl Engine {
             Transaction::Deposit { id, client, amount } => self.do_deposit(id, client, amount),
             Transaction::Withdrawal { client, amount, .. } => self.do_withdrawal(client, amount)?,
             Transaction::Dispute { client, deposit } => self.do_dispute(client, deposit)?,
-            Transaction::Resolve { client, deposit } => {}
+            Transaction::Resolve { client, deposit } => self.do_resolve(client, deposit)?,
             Transaction::Chargeback { client, deposit } => {}
         }
         Ok(())
@@ -67,25 +67,9 @@ impl Engine {
         Ok(())
     }
 
-    fn do_dispute(&mut self, client: ClientId, deposit_id: TransactionId) -> Result<(), String> {
-        let deposit = self.deposits.get_mut(&deposit_id).ok_or(format!(
-            "deposit with transaction id {} does not exist",
-            deposit_id
-        ))?;
-
-        if deposit.client != client {
-            return Err(format!(
-                "dispute client {} does not match deposit client {}",
-                client, deposit.client
-            ));
-        }
-
-        if !matches!(deposit.dispute_state, DisputeState::Deposited) {
-            return Err(format!(
-                "incorrect dispute state {:?} for transaction {}",
-                deposit.dispute_state, deposit_id
-            ));
-        }
+    fn do_dispute(&mut self, client: ClientId, deposit: TransactionId) -> Result<(), String> {
+        let deposit =
+            Engine::get_deposit_mut(&mut self.deposits, deposit, client, DisputeState::Deposited)?;
 
         let account = self
             .accounts
@@ -98,6 +82,49 @@ impl Engine {
 
         Ok(())
     }
+
+    fn do_resolve(&mut self, client: ClientId, deposit: TransactionId) -> Result<(), String> {
+        let deposit =
+            Engine::get_deposit_mut(&mut self.deposits, deposit, client, DisputeState::Disputed)?;
+
+        let account = self
+            .accounts
+            .get_mut(&client)
+            .ok_or(format!("resolving client {} does not exist", client))?;
+
+        account.held -= deposit.amount;
+        account.available += deposit.amount;
+        deposit.dispute_state = DisputeState::Resolved;
+
+        Ok(())
+    }
+
+    fn get_deposit_mut(
+        deposits: &mut HashMap<TransactionId, Deposit>,
+        id: TransactionId,
+        client: ClientId,
+        expected_dispute_state: DisputeState,
+    ) -> Result<&mut Deposit, String> {
+        let deposit = deposits
+            .get_mut(&id)
+            .ok_or(format!("deposit with transaction id {} does not exist", id))?;
+
+        if deposit.client != client {
+            return Err(format!(
+                "client {} does not match deposit client {}",
+                client, deposit.client
+            ));
+        }
+
+        if deposit.dispute_state != expected_dispute_state {
+            return Err(format!(
+                "transaction {} has dispute state {:?}, expected {:?}",
+                id, deposit.dispute_state, expected_dispute_state
+            ));
+        }
+
+        Ok(deposit)
+    }
 }
 
 struct Deposit {
@@ -106,7 +133,7 @@ struct Deposit {
     dispute_state: DisputeState,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum DisputeState {
     Deposited,
     Disputed,
