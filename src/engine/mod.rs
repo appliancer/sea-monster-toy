@@ -36,6 +36,10 @@ impl Engine {
         client: ClientId,
         amount: Money,
     ) -> Result<(), String> {
+        if self.deposits.contains_key(&id) {
+            return Err(format!("deposit with transaction id {} already exists", id));
+        }
+
         let account = Engine::get_account_mut(&mut self.accounts, client, true)?;
         account.available += amount;
 
@@ -46,7 +50,7 @@ impl Engine {
                 amount,
                 dispute_state: DisputeState::Deposited,
             },
-        ); // TODO: log if already exists
+        );
 
         Ok(())
     }
