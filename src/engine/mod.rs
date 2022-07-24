@@ -14,6 +14,10 @@ impl Engine {
         }
     }
 
+    pub fn get_accounts(&self) -> Values<ClientId, Account> {
+        self.accounts.values()
+    }
+
     pub fn do_transaction(&mut self, transaction: Transaction) {
         match transaction {
             Transaction::Deposit { id, client, amount } => self.do_deposit(client, amount),

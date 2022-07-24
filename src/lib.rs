@@ -1,7 +1,4 @@
-use engine::{
-    types::{Account, Transaction},
-    Engine,
-};
+use engine::{types::Transaction, Engine};
 use std::error::Error;
 use std::io::{Read, Write};
 
@@ -21,15 +18,18 @@ pub fn process_transactions(
         engine.do_transaction(transaction);
     }
 
+    const HEADERS: [&str; 5] = ["client", "available", "held", "total", "locked"];
     let mut csv_writer = csv::Writer::from_writer(writer);
-    let account = Account::new(1);
-    csv_writer.write_record([
-        account.client.to_string(),
-        account.available.to_string(),
-        account.held.to_string(),
-        (account.available + account.held).to_string(),
-        account.locked.to_string(),
-    ])?;
+    csv_writer.write_record(HEADERS)?;
+    for account in engine.get_accounts() {
+        csv_writer.write_record([
+            account.client.to_string(),
+            account.available.to_string(),
+            account.held.to_string(),
+            (account.available + account.held).to_string(),
+            account.locked.to_string(),
+        ])?;
+    }
 
     Ok(())
 }
