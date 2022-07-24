@@ -1,4 +1,4 @@
-use std::collections::hash_map::{HashMap, Values};
+use std::collections::hash_map::{Entry, HashMap, Values};
 use types::*;
 
 pub mod types;
@@ -21,23 +21,22 @@ impl Engine {
     }
 
     pub fn do_transaction(&mut self, transaction: Transaction) -> Result<(), String> {
-        // TODO: check if account locked
         match transaction {
             Transaction::Deposit { id, client, amount } => self.do_deposit(id, client, amount),
-            Transaction::Withdrawal { client, amount, .. } => self.do_withdrawal(client, amount)?,
-            Transaction::Dispute { client, deposit } => self.do_dispute(client, deposit)?,
-            Transaction::Resolve { client, deposit } => self.do_resolve(client, deposit)?,
-            Transaction::Chargeback { client, deposit } => self.do_chargeback(client, deposit)?,
+            Transaction::Withdrawal { client, amount, .. } => self.do_withdrawal(client, amount),
+            Transaction::Dispute { client, deposit } => self.do_dispute(client, deposit),
+            Transaction::Resolve { client, deposit } => self.do_resolve(client, deposit),
+            Transaction::Chargeback { client, deposit } => self.do_chargeback(client, deposit),
         }
-        Ok(())
     }
 
-    fn do_deposit(&mut self, id: TransactionId, client: ClientId, amount: Money) {
-        let account = self
-            .accounts
-            .entry(client)
-            .or_insert_with(|| Account::new(client));
-
+    fn do_deposit(
+        &mut self,
+        id: TransactionId,
+        client: ClientId,
+        amount: Money,
+    ) -> Result<(), String> {
+        let account = Engine::get_account_mut(&mut self.accounts, client, true)?;
         account.available += amount;
 
         self.deposits.insert(
@@ -48,13 +47,12 @@ impl Engine {
                 dispute_state: DisputeState::Deposited,
             },
         ); // TODO: log if already exists
+
+        Ok(())
     }
 
     fn do_withdrawal(&mut self, client: ClientId, amount: Money) -> Result<(), String> {
-        let account = self
-            .accounts
-            .entry(client)
-            .or_insert_with(|| Account::new(client));
+        let account = Engine::get_account_mut(&mut self.accounts, client, true)?;
 
         if amount > account.available {
             return Err(format!(
@@ -72,10 +70,7 @@ impl Engine {
         let deposit =
             Engine::get_deposit_mut(&mut self.deposits, deposit, client, DisputeState::Deposited)?;
 
-        let account = self
-            .accounts
-            .get_mut(&client)
-            .ok_or(format!("disputing client {} does not exist", client))?;
+        let account = Engine::get_account_mut(&mut self.accounts, client, false)?;
 
         account.available -= deposit.amount;
         account.held += deposit.amount;
@@ -88,10 +83,7 @@ impl Engine {
         let deposit =
             Engine::get_deposit_mut(&mut self.deposits, deposit, client, DisputeState::Disputed)?;
 
-        let account = self
-            .accounts
-            .get_mut(&client)
-            .ok_or(format!("resolving client {} does not exist", client))?;
+        let account = Engine::get_account_mut(&mut self.accounts, client, false)?;
 
         account.held -= deposit.amount;
         account.available += deposit.amount;
@@ -104,16 +96,36 @@ impl Engine {
         let deposit =
             Engine::get_deposit_mut(&mut self.deposits, deposit, client, DisputeState::Disputed)?;
 
-        let account = self
-            .accounts
-            .get_mut(&client)
-            .ok_or(format!("chargebacking client {} does not exist", client))?;
+        let account = Engine::get_account_mut(&mut self.accounts, client, false)?;
 
         account.held -= deposit.amount;
         account.locked = true;
         deposit.dispute_state = DisputeState::ChargedBack;
 
         Ok(())
+    }
+
+    fn get_account_mut(
+        accounts: &mut HashMap<ClientId, Account>,
+        client: ClientId,
+        create: bool,
+    ) -> Result<&mut Account, String> {
+        let account = match accounts.entry(client) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => {
+                if create {
+                    entry.insert(Account::new(client))
+                } else {
+                    return Err(format!("client {} does not exist", client));
+                }
+            }
+        };
+
+        if account.locked {
+            return Err(format!("client {} is locked", client));
+        }
+
+        Ok(account)
     }
 
     fn get_deposit_mut(
