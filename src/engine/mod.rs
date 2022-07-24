@@ -21,12 +21,13 @@ impl Engine {
     }
 
     pub fn do_transaction(&mut self, transaction: Transaction) -> Result<(), String> {
+        // TODO: check if account locked
         match transaction {
             Transaction::Deposit { id, client, amount } => self.do_deposit(id, client, amount),
             Transaction::Withdrawal { client, amount, .. } => self.do_withdrawal(client, amount)?,
             Transaction::Dispute { client, deposit } => self.do_dispute(client, deposit)?,
             Transaction::Resolve { client, deposit } => self.do_resolve(client, deposit)?,
-            Transaction::Chargeback { client, deposit } => {}
+            Transaction::Chargeback { client, deposit } => self.do_chargeback(client, deposit)?,
         }
         Ok(())
     }
@@ -95,6 +96,22 @@ impl Engine {
         account.held -= deposit.amount;
         account.available += deposit.amount;
         deposit.dispute_state = DisputeState::Resolved;
+
+        Ok(())
+    }
+
+    fn do_chargeback(&mut self, client: ClientId, deposit: TransactionId) -> Result<(), String> {
+        let deposit =
+            Engine::get_deposit_mut(&mut self.deposits, deposit, client, DisputeState::Disputed)?;
+
+        let account = self
+            .accounts
+            .get_mut(&client)
+            .ok_or(format!("chargebacking client {} does not exist", client))?;
+
+        account.held -= deposit.amount;
+        account.locked = true;
+        deposit.dispute_state = DisputeState::ChargedBack;
 
         Ok(())
     }
