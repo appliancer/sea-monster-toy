@@ -136,3 +136,44 @@ fn invalid_transactions() {
 
     assert_eq!(String::from_utf8(buf).unwrap(), WANT);
 }
+
+#[test]
+fn multiple_clients() {
+    const INPUT: &str = r#"type,       client, tx, amount
+                           deposit,         1,  1,      9
+                           deposit,         1,  2,     14
+                           deposit,         2,  3,     28
+                           withdrawal,      1,  4,      8
+                           deposit,         3,  5,     95
+                           deposit,         4,  6,     21
+                           deposit,         4,  7,      7
+                           dispute,         4,  6,
+                           dispute,         1,  2,
+                           dispute,         3,  5,
+                           resolve,         3,  5,
+                           chargeback,      4,  6,
+"#;
+
+    const WANT: &str = r#"client,available,held,total,locked
+1,1,14,15,false
+2,28,0,28,false
+3,95,0,95,false
+4,7,0,7,true
+"#;
+
+    let mut buf = Vec::new();
+    run(INPUT.as_bytes(), &mut buf).unwrap();
+
+    let actual = String::from_utf8(buf).unwrap();
+    let actual_lines: Vec<&str> = actual.lines().collect();
+    assert_eq!(actual_lines.len(), WANT.lines().count());
+
+    for want_line in WANT.lines() {
+        assert!(
+            actual_lines.contains(&want_line),
+            "actual output does not contain line {}\nactual output:\n{}",
+            want_line,
+            actual
+        );
+    }
+}
