@@ -21,10 +21,10 @@ impl Engine {
     pub fn do_transaction(&mut self, transaction: Transaction) {
         match transaction {
             Transaction::Deposit { id, client, amount } => self.do_deposit(client, amount),
-            Transaction::Withdrawal { .. } => {}
-            Transaction::Dispute { .. } => {}
-            Transaction::Resolve { .. } => {}
-            Transaction::Chargeback { .. } => {}
+            Transaction::Withdrawal { id, client, amount } => self.do_withdrawal(client, amount),
+            Transaction::Dispute { client, deposit } => {}
+            Transaction::Resolve { client, deposit } => {}
+            Transaction::Chargeback { client, deposit } => {}
         }
     }
 
@@ -34,5 +34,22 @@ impl Engine {
             .entry(client)
             .or_insert_with(|| Account::new(client));
         account.available += amount;
+    }
+
+    fn do_withdrawal(&mut self, client: ClientId, amount: Money) {
+        let account = self
+            .accounts
+            .entry(client)
+            .or_insert_with(|| Account::new(client));
+
+        if amount > account.available {
+            eprintln!(
+                "client {} has insufficient available funds ({}) to withdraw {}",
+                account.client, account.available, amount
+            );
+            return;
+        }
+
+        account.available -= amount;
     }
 }
