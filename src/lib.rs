@@ -15,13 +15,33 @@ pub fn process_transactions(
     Ok(())
 }
 
+type ClientId = u16;
+type TransactionId = u32;
+
 #[derive(Debug)]
 enum Transaction {
-    Deposit { id: u32, client: u16, amount: f64 },
-    Withdrawal { id: u32, client: u16, amount: f64 },
-    Dispute { client: u16, deposit: u32 },
-    Resolve { client: u16, deposit: u32 },
-    Chargeback { client: u16, deposit: u32 },
+    Deposit {
+        id: TransactionId,
+        client: ClientId,
+        amount: f64,
+    },
+    Withdrawal {
+        id: TransactionId,
+        client: ClientId,
+        amount: f64,
+    },
+    Dispute {
+        client: ClientId,
+        deposit: TransactionId,
+    },
+    Resolve {
+        client: ClientId,
+        deposit: TransactionId,
+    },
+    Chargeback {
+        client: ClientId,
+        deposit: TransactionId,
+    },
 }
 
 fn parse_transaction(fields: &[&str]) -> Result<Transaction, Box<dyn Error>> {
