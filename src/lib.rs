@@ -77,3 +77,6 @@ fn parse_transaction(fields: &[&str]) -> Result<Transaction, Box<dyn Error>> {
         Err("invalid number of fields in CSV line".into())
     };
 }
+
+#[cfg(test)]
+mod tests;
