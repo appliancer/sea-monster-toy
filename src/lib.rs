@@ -17,18 +17,19 @@ pub fn process_transactions(
 
 type ClientId = u16;
 type TransactionId = u32;
+type Money = fixed::types::I48F16;
 
 #[derive(Debug)]
 enum Transaction {
     Deposit {
         id: TransactionId,
         client: ClientId,
-        amount: f64,
+        amount: Money,
     },
     Withdrawal {
         id: TransactionId,
         client: ClientId,
-        amount: f64,
+        amount: Money,
     },
     Dispute {
         client: ClientId,
