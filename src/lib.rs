@@ -1,6 +1,11 @@
-use std::collections::HashMap;
+use engine::{
+    types::{Account, Transaction},
+    Engine,
+};
 use std::error::Error;
 use std::io::{Read, Write};
+
+mod engine;
 
 pub fn process_transactions(
     reader: impl Read,
@@ -17,12 +22,7 @@ pub fn process_transactions(
     }
 
     let mut csv_writer = csv::Writer::from_writer(writer);
-    let account = Account {
-        client: 1,
-        available: 12.into(),
-        held: 11.into(),
-        locked: false,
-    };
+    let account = Account::new(1);
     csv_writer.write_record([
         account.client.to_string(),
         account.available.to_string(),
@@ -32,52 +32,6 @@ pub fn process_transactions(
     ])?;
 
     Ok(())
-}
-
-struct Engine {
-    clients: HashMap<ClientId, Account>,
-}
-
-impl Engine {
-    fn new() -> Engine {
-        Engine {
-            clients: HashMap::new(),
-        }
-    }
-
-    fn do_transaction(&mut self, transaction: Transaction) {
-        eprintln!("doing transaction: {:?}", transaction);
-    }
-}
-
-type ClientId = u16;
-type TransactionId = u32;
-type Money = fixed::types::I48F16;
-
-#[derive(Debug)]
-enum Transaction {
-    Deposit {
-        id: TransactionId,
-        client: ClientId,
-        amount: Money,
-    },
-    Withdrawal {
-        id: TransactionId,
-        client: ClientId,
-        amount: Money,
-    },
-    Dispute {
-        client: ClientId,
-        deposit: TransactionId,
-    },
-    Resolve {
-        client: ClientId,
-        deposit: TransactionId,
-    },
-    Chargeback {
-        client: ClientId,
-        deposit: TransactionId,
-    },
 }
 
 fn parse_transaction(fields: &[&str]) -> Result<Transaction, Box<dyn Error>> {
@@ -110,12 +64,4 @@ fn parse_transaction(fields: &[&str]) -> Result<Transaction, Box<dyn Error>> {
     } else {
         Err("invalid number of fields in CSV line".into())
     };
-}
-
-#[derive(Debug)]
-struct Account {
-    client: ClientId,
-    available: Money,
-    held: Money,
-    locked: bool,
 }
