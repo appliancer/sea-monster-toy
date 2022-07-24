@@ -1,20 +1,34 @@
-use std::collections::HashMap;
+use std::collections::hash_map::{HashMap, Values};
 use types::*;
 
 pub mod types;
 
 pub struct Engine {
-    clients: HashMap<ClientId, Account>,
+    accounts: HashMap<ClientId, Account>,
 }
 
 impl Engine {
     pub fn new() -> Engine {
         Engine {
-            clients: HashMap::new(),
+            accounts: HashMap::new(),
         }
     }
 
     pub fn do_transaction(&mut self, transaction: Transaction) {
-        eprintln!("doing transaction: {:?}", transaction);
+        match transaction {
+            Transaction::Deposit { id, client, amount } => self.do_deposit(client, amount),
+            Transaction::Withdrawal { .. } => {}
+            Transaction::Dispute { .. } => {}
+            Transaction::Resolve { .. } => {}
+            Transaction::Chargeback { .. } => {}
+        }
+    }
+
+    fn do_deposit(&mut self, client: ClientId, amount: Money) {
+        let account = self
+            .accounts
+            .entry(client)
+            .or_insert_with(|| Account::new(client));
+        account.available += amount;
     }
 }
