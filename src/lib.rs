@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::error::Error;
 use std::io::{Read, Write};
 
@@ -5,11 +6,14 @@ pub fn process_transactions(
     reader: impl Read,
     writer: &mut impl Write,
 ) -> Result<(), Box<dyn Error>> {
+    let mut engine = Engine::new();
+
     let mut csv_reader = csv::Reader::from_reader(reader);
     for record in csv_reader.records() {
         let record = record?;
         let fields: Vec<&str> = record.iter().map(str::trim).collect();
         let transaction = parse_transaction(&fields)?;
+        engine.do_transaction(transaction);
     }
 
     let mut csv_writer = csv::Writer::from_writer(writer);
@@ -28,6 +32,22 @@ pub fn process_transactions(
     ])?;
 
     Ok(())
+}
+
+struct Engine {
+    clients: HashMap<ClientId, Account>,
+}
+
+impl Engine {
+    fn new() -> Engine {
+        Engine {
+            clients: HashMap::new(),
+        }
+    }
+
+    fn do_transaction(&mut self, transaction: Transaction) {
+        eprintln!("doing transaction: {:?}", transaction);
+    }
 }
 
 type ClientId = u16;
