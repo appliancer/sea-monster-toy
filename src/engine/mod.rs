@@ -24,7 +24,7 @@ impl Engine {
         match transaction {
             Transaction::Deposit { id, client, amount } => self.do_deposit(id, client, amount),
             Transaction::Withdrawal { client, amount, .. } => self.do_withdrawal(client, amount)?,
-            Transaction::Dispute { client, deposit } => {}
+            Transaction::Dispute { client, deposit } => self.do_dispute(client, deposit)?,
             Transaction::Resolve { client, deposit } => {}
             Transaction::Chargeback { client, deposit } => {}
         }
