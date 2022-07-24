@@ -5,12 +5,14 @@ pub mod types;
 
 pub struct Engine {
     accounts: HashMap<ClientId, Account>,
+    deposits: HashMap<TransactionId, Deposit>,
 }
 
 impl Engine {
     pub fn new() -> Engine {
         Engine {
             accounts: HashMap::new(),
+            deposits: HashMap::new(),
         }
     }
 
@@ -20,20 +22,30 @@ impl Engine {
 
     pub fn do_transaction(&mut self, transaction: Transaction) {
         match transaction {
-            Transaction::Deposit { id, client, amount } => self.do_deposit(client, amount),
-            Transaction::Withdrawal { id, client, amount } => self.do_withdrawal(client, amount),
+            Transaction::Deposit { id, client, amount } => self.do_deposit(id, client, amount),
+            Transaction::Withdrawal { client, amount, .. } => self.do_withdrawal(client, amount),
             Transaction::Dispute { client, deposit } => {}
             Transaction::Resolve { client, deposit } => {}
             Transaction::Chargeback { client, deposit } => {}
         }
     }
 
-    fn do_deposit(&mut self, client: ClientId, amount: Money) {
+    fn do_deposit(&mut self, id: TransactionId, client: ClientId, amount: Money) {
         let account = self
             .accounts
             .entry(client)
             .or_insert_with(|| Account::new(client));
+
         account.available += amount;
+
+        self.deposits.insert(
+            id,
+            Deposit {
+                client,
+                amount,
+                dispute_state: DisputeState::Deposited,
+            },
+        ); // TODO: log if already exists
     }
 
     fn do_withdrawal(&mut self, client: ClientId, amount: Money) {
@@ -52,4 +64,17 @@ impl Engine {
 
         account.available -= amount;
     }
+}
+
+struct Deposit {
+    client: ClientId,
+    amount: Money,
+    dispute_state: DisputeState,
+}
+
+enum DisputeState {
+    Deposited,
+    Disputed,
+    Resolved,
+    ChargedBack,
 }
