@@ -10,8 +10,23 @@ pub fn process_transactions(
         let record = record?;
         let fields: Vec<&str> = record.iter().map(str::trim).collect();
         let transaction = parse_transaction(&fields)?;
-        writeln!(writer, "{:?}", transaction)?;
     }
+
+    let mut csv_writer = csv::Writer::from_writer(writer);
+    let account = Account {
+        client: 1,
+        available: 12.into(),
+        held: 11.into(),
+        locked: false,
+    };
+    csv_writer.write_record([
+        account.client.to_string(),
+        account.available.to_string(),
+        account.held.to_string(),
+        (account.available + account.held).to_string(),
+        account.locked.to_string(),
+    ])?;
+
     Ok(())
 }
 
@@ -75,4 +90,12 @@ fn parse_transaction(fields: &[&str]) -> Result<Transaction, Box<dyn Error>> {
     } else {
         Err("invalid number of fields in CSV line".into())
     };
+}
+
+#[derive(Debug)]
+struct Account {
+    client: ClientId,
+    available: Money,
+    held: Money,
+    locked: bool,
 }
