@@ -126,6 +126,7 @@ fn invalid_transactions() {
                            chargeback,      6,  2,
                            dispute,         6, 50,
                            dispute,         6,  4,
+                           dispute,         7,  2,
 "#;
 
     const WANT: &str = r#"client,available,held,total,locked
