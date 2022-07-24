@@ -79,6 +79,26 @@ fn dispute_after_withdrawal() {
 }
 
 #[test]
+fn chargeback_after_withdrawal() {
+    const INPUT: &str = r#"type,       client, tx, amount
+                           deposit,         4,  2,     13
+                           deposit,         4,  3,     11
+                           withdrawal,      4,  8,     20
+                           dispute,         4,  2,
+                           chargeback,      4,  2,
+"#;
+
+    const WANT: &str = r#"client,available,held,total,locked
+4,-9,0,-9,true
+"#;
+
+    let mut buf = Vec::new();
+    run(INPUT.as_bytes(), &mut buf).unwrap();
+
+    assert_eq!(String::from_utf8(buf).unwrap(), WANT);
+}
+
+#[test]
 fn overdraw_attempt() {
     const INPUT: &str = r#"type,       client, tx, amount
                            deposit,         5,  1,     15
