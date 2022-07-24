@@ -64,6 +64,38 @@ impl Engine {
 
         account.available -= amount;
     }
+
+    fn do_dispute(&mut self, client: ClientId, deposit_id: TransactionId) -> Result<(), String> {
+        let deposit = self.deposits.get_mut(&deposit_id).ok_or(format!(
+            "deposit with transaction id {} does not exist",
+            deposit_id
+        ))?;
+
+        if deposit.client != client {
+            return Err(format!(
+                "dispute client {} does not match deposit client {}",
+                client, deposit.client
+            ));
+        }
+
+        if !matches!(deposit.dispute_state, DisputeState::Deposited) {
+            return Err(format!(
+                "incorrect dispute state {:?} for transaction {}",
+                deposit.dispute_state, deposit_id
+            ));
+        }
+
+        let account = self
+            .accounts
+            .get_mut(&client)
+            .ok_or(format!("disputing client {} does not exist", client))?;
+
+        account.available -= deposit.amount;
+        account.held += deposit.amount;
+        deposit.dispute_state = DisputeState::Disputed;
+
+        Ok(())
+    }
 }
 
 struct Deposit {
@@ -72,6 +104,7 @@ struct Deposit {
     dispute_state: DisputeState,
 }
 
+#[derive(Debug)]
 enum DisputeState {
     Deposited,
     Disputed,
